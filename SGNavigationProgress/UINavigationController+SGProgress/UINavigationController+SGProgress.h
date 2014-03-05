@@ -13,6 +13,8 @@
 
 @interface UINavigationController (SGProgress)
 
+@property (copy, nonatomic) NSString *originalTitle;
+
 - (void)showSGProgress;
 - (void)showSGProgressWithDuration:(float)duration;
 - (void)showSGProgressWithDuration:(float)duration andTintColor:(UIColor *)tintColor;
@@ -30,4 +32,5 @@
 
 - (void)finishSGProgress;
 - (void)cancelSGProgress;
+- (void)cancelSGProgressWithAnimationDuration:(NSTimeInterval)animationDuration;
 @end

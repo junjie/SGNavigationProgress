@@ -7,6 +7,9 @@
 //
 
 #import "UINavigationController+SGProgress.h"
+#import <objc/runtime.h>
+
+static char const * const SGProgressOriginalTitle = "SGProgressOriginalTitle";
 
 NSInteger const SGProgresstagId = 222122323;
 NSInteger const SGProgressMasktagId = 221222322;
@@ -14,6 +17,20 @@ NSInteger const SGProgressMiniMasktagId = 221222321;
 CGFloat const SGProgressBarHeight = 2.5;
 
 @implementation UINavigationController (SGProgress)
+@dynamic originalTitle;
+
+- (void)setOriginalTitle:(NSString *)originalTitle
+{
+	objc_setAssociatedObject(self, SGProgressOriginalTitle, originalTitle, OBJC_ASSOCIATION_COPY_NONATOMIC);
+}
+
+- (NSString *)originalTitle
+{
+	return objc_getAssociatedObject(self, SGProgressOriginalTitle);
+}
+
+#pragma mark - 
+
 
 - (CGRect)getSGMaskFrame
 {
@@ -137,30 +154,23 @@ CGFloat const SGProgressBarHeight = 2.5;
 
 - (void)resetTitle
 {
-	BOOL titleChanged = [[[NSUserDefaults standardUserDefaults] objectForKey:kSGProgressTitleChanged] boolValue];
+	BOOL titleChanged = self.originalTitle && ![self.originalTitle isEqualToString:self.visibleViewController.navigationItem.title];
 	
-	if(titleChanged)
+	if (titleChanged)
 	{
-		NSString *oldTitle = [[NSUserDefaults standardUserDefaults] objectForKey:kSGProgressOldTitle];
-		//add animation
-		self.visibleViewController.navigationItem.title = oldTitle;
+		self.visibleViewController.navigationItem.title = self.originalTitle;
 	}
 
-	[[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithBool:NO] forKey:kSGProgressTitleChanged];
-	[[NSUserDefaults standardUserDefaults] setObject:@"" forKey:kSGProgressOldTitle];
-	[[NSUserDefaults standardUserDefaults] synchronize];
-	
+	self.originalTitle = nil;
 }
 
 - (void)changeSGProgressWithTitle:(NSString *)title
 {
-	BOOL titleAlreadyChanged = [[[NSUserDefaults standardUserDefaults] objectForKey:kSGProgressTitleChanged] boolValue];
-	if(!titleAlreadyChanged)
+	BOOL titleAlreadyChanged = self.originalTitle.length > 0;
+	
+	if (!titleAlreadyChanged)
 	{
-		NSString *oldTitle = self.visibleViewController.navigationItem.title;
-		[[NSUserDefaults standardUserDefaults] setObject:oldTitle forKey:kSGProgressOldTitle];
-		[[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithBool:YES] forKey:kSGProgressTitleChanged];
-		[[NSUserDefaults standardUserDefaults] synchronize];
+		self.originalTitle = self.visibleViewController.navigationItem.title;
 		
 		//add animation
 		self.visibleViewController.navigationItem.title = title;
@@ -270,11 +280,15 @@ CGFloat const SGProgressBarHeight = 2.5;
 }
 
 - (void)cancelSGProgress {
+	[self cancelSGProgressWithAnimationDuration:0.5];
+}
+
+- (void)cancelSGProgressWithAnimationDuration:(NSTimeInterval)animationDuration {
     UIView *progressView = [self setupSGProgressSubview];
 
     if(progressView)
     {
-        [UIView animateWithDuration:0.5 animations:^{
+        [UIView animateWithDuration:animationDuration animations:^{
             progressView.alpha = 0;
         } completion:^(BOOL finished) {
             [progressView removeFromSuperview];
